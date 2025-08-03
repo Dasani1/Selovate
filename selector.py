@@ -1,20 +1,53 @@
 import pygame
-import sys
+import json
+import tkinter as tk
+from tkinter import filedialog
+import os
 
 BLACK = (0,0,0)
 RED = (255,0,0)
 WHITE = (255,255,255)
+GREY = (192,192,192)
 COLOR_INACTIVE = pygame.Color('lightskyblue3')
 COLOR_ACTIVE = pygame.Color('dodgerblue2')
+DISPLAY_BOX_MARGIN_X = 0.22  # 10% from left and right
+DISPLAY_BOX_MARGIN_Y = 0.22  # 10% from top and bottom
+
 
 pygame.init()
+root = tk.Tk()  
+root.withdraw()
 
 FONT = pygame.font.Font(None, 32)
 screenx = 800
 screeny = 450
 screen_size = [screenx,screeny]
 
+answers = {}
+
 round = 20
+
+def upload_folder(): #Open file dialog, return file path
+    root = tk.Tk()
+    root.withdraw()
+    folder_path = filedialog.askdirectory()
+    root.destroy()
+    return folder_path
+
+def images_folder(folder_path):
+    images = []
+    valid_types = (".png", ".jpg", ".jpeg")
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith(valid_types):
+            full_path = os.path.join(folder_path, filename)
+            try:
+                img = pygame.image.load(full_path)
+                images.append(( filename, img))
+            except pygame.error:
+                print(f"Could not load {full_path}")
+    return images
+
+uploaded_image = []
 
 screen = pygame.display.set_mode(screen_size,pygame.RESIZABLE) #We want to make the screen size dynamic
 pygame.display.set_caption("Selovate")
@@ -29,8 +62,8 @@ class Button:
 
         self.name = text
 
-        self.width = box.width
-        self.height = box.height
+        self.width = box.width / screenx
+        self.height = box.height /screeny
  
         self.held = False
 
@@ -42,6 +75,8 @@ class Button:
         self.text_loc = self.text.get_rect(center=self.hitbox.center)
 
         self.visibility = visibility
+
+        self.toggle = True #for default
 
     def binary_font(self,text): #In the name, uses binary search to find which size is the most optimal for the box
         max = self.hitbox.height-4
@@ -61,7 +96,7 @@ class Button:
 
         return pygame.font.Font('freesansbold.ttf',optimal)
     
-    def handle(self,event):
+    def handle(self,event): #handles all events involving clicking the button
         if self.visibility: #When switching menus I want to make it so that buttons disappear and lose the ability to function until turned back on
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.hitbox.collidepoint(event.pos):
@@ -74,34 +109,59 @@ class Button:
                 self.held = False
     
     def state(self):
+        global uploaded_image
+        global iterate
+
         if self.name == "+": #Creates a pop up input box to input what you want to identify
-            add.setVis(True)
+            if self.toggle:
+                add.setVis(True)
+                self.toggle = False
+            else:
+                add.setVis(False)
+                self.toggle = True
         
         elif self.name == "-": #Removes the list of identifiers to image train
             if len(identifiers):
                 identifiers.pop()
+                removed = names.pop()
 
-        
+        elif self.name == "Upload":
+            folder_path = upload_folder()
+
+            if folder_path:
+                uploaded_image = images_folder(folder_path)
+
+        elif self.name in names:
+            name = str(uploaded_image[iterate][0]).split(".")
+            answers[name[0]] = self.name
+            print(answers)
+            
+
+            iterate += 1 
+
+        elif self.name == "Finish":
+            file_path = "answers.json"
+            with open(file_path,"w") as f:
+                json.dump(answers,f)
 
     def draw(self,surface): #If held, turn red, otherwise white
         if self.visibility:
-            colour = RED if self.held else WHITE
+            colour = RED if self.held else GREY
             pygame.draw.rect(surface,colour,self.hitbox,0,round)
             screen.blit(self.text,self.text_loc)
 
-    # def create(self,name):
-    #     return Button(pygame.Rect(10,80,50,50),name,True)
+    def setEverything(self): #scaling the screen
 
-    def setEverything(self):
-
-        self.hitbox.x = screenx*(self.x/100) #Scale to the size of the screen, will implement size soon
+        self.hitbox.x = screenx*(self.x/100) #Scale to the size of the screen
         self.hitbox.y = screeny*(self.y/100)
 
-        # self.hitbox.width = screenx*(self.x/100)
-        # self.hitbox.height = screenx*(self.x/100)
-        # self.binary_font(self.name)
+        self.hitbox.width = screenx * self.width
+        self.hitbox.height = screeny * self.height
 
-        self.text_loc.center = self.hitbox.center #Update the text to follow rect
+        self.font = self.binary_font(self.name)
+        self.text = self.font.render(self.name, True, BLACK)
+        self.text_loc = self.text.get_rect(center=self.hitbox.center) #Center hitbox to follow 
+
 
     # setters
     def setState(self,state):
@@ -128,7 +188,11 @@ class InputBox:
         self.text = text
         self.txt_surface = FONT.render(text, True, self.color)
         self.active = False
-        self.visibility = False
+        self.visibility = False #By default it just needs to be off
+        self.x = x / screenx
+        self.y = y / screeny
+        self.width = w / screenx
+        self.height = h / screeny
 
     def handle_event(self, event):
         if self.visibility:
@@ -152,7 +216,6 @@ class InputBox:
                             identifiers.append(Create.create(self.text))
                         
                         self.text = ''
-   
     
                     elif event.key == pygame.K_BACKSPACE:
                         self.text = self.text[:-1]
@@ -168,6 +231,15 @@ class InputBox:
         width = max(200, self.txt_surface.get_width()+10)
         self.rect.w = width
 
+    def rescale(self):
+        self.rect.x = (screenx * self.x/100)
+        self.rect.y = (screeny * self.y/100)
+        self.rect.w = (screenx * self.width/100)
+        self.rect.h = (screeny * self.height/100)
+
+        self.txt_surface = FONT.render(self.text, True, self.color)
+
+
     def draw(self, screen):
         if self.visibility:
             # Blit the text.
@@ -182,29 +254,31 @@ class InputBox:
         self.text = word
 
     def setVis(self,value=bool):
-        if value == True:
-            self.visibility = True
+        self.visibility = value
 
 class Create:
 
     def create(text):
 
-        return Button(pygame.Rect(len(identifiers)*10+5,75,75,75),text,True)
+        return Button(pygame.Rect(len(identifiers)*7+5,85,50,50),text,True)
 
 clock = pygame.time.Clock()
 
-add = InputBox(100, 200, 140, 32)
+add = InputBox(30, 10, 140, 32)
 
 input_boxes = [add]
 
-set = Button(pygame.Rect(80,10,50,100),"Settings",True)
+# set = Button(pygame.Rect(80,10,50,100),"Settings",False) #Later if I even have time
+upload = Button(pygame.Rect(80,10,100,50),"Upload",True)
 minus = Button(pygame.Rect(10,10,50,50),"-",True)
 plus = Button(pygame.Rect(17,10,50,50),"+",True)
+finish = Button(pygame.Rect(80,80,100,50),"Finish",True)
 
-main_screen = [set,minus,plus]
+main_screen = [minus,plus,upload,finish]
 
 identifiers = []
 names = []
+iterate = 0
 
 running = True
 
@@ -242,8 +316,29 @@ while running:
             keys.setEverything()
             keys.draw(screen)
 
+    border_x = int(screenx * DISPLAY_BOX_MARGIN_X)
+    border_y = int(screeny * DISPLAY_BOX_MARGIN_Y)
+    border_width = int(screenx * (1 - 2 * DISPLAY_BOX_MARGIN_X))
+    border_height = int(screeny * (1 - 2 * DISPLAY_BOX_MARGIN_Y))
+
+    image_area = pygame.Rect(border_x, border_y, border_width, border_height)
+
+    pygame.draw.rect(screen, (200, 200, 200), image_area, border_radius=10)
+
+    if uploaded_image:
+        original = uploaded_image[iterate][1]
+        orig_width, orig_height = original.get_size()
+        ratio_x = border_width / orig_width
+        ratio_y = border_height / orig_height
+        scale = min(ratio_x, ratio_y)
+        scaled_width = int(orig_width * scale)
+        scaled_height = int(orig_height * scale)
+        scaled_image = pygame.transform.scale(original, (scaled_width, scaled_height))
+
+        image_x = border_x + (border_width - scaled_width) // 2
+        image_y = border_y + (border_height - scaled_height) // 2
+        screen.blit(scaled_image, (image_x, image_y))
+
     pygame.display.flip()
 
     clock.tick(30)
-
-pygame.quit()
