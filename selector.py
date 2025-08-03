@@ -13,7 +13,6 @@ COLOR_ACTIVE = pygame.Color('dodgerblue2')
 DISPLAY_BOX_MARGIN_X = 0.22  # 10% from left and right
 DISPLAY_BOX_MARGIN_Y = 0.22  # 10% from top and bottom
 
-
 pygame.init()
 root = tk.Tk()  
 root.withdraw()
@@ -123,7 +122,6 @@ class Button:
         elif self.name == "-": #Removes the list of identifiers to image train
             if len(identifiers):
                 identifiers.pop()
-                removed = names.pop()
 
         elif self.name == "Upload":
             folder_path = upload_folder()
@@ -134,8 +132,7 @@ class Button:
         elif self.name in names:
             name = str(uploaded_image[iterate][0]).split(".")
             answers[name[0]] = self.name
-            print(answers)
-            
+            # print(answers)
 
             iterate += 1 
 
@@ -143,6 +140,12 @@ class Button:
             file_path = "answers.json"
             with open(file_path,"w") as f:
                 json.dump(answers,f)
+
+        elif self.name == "Undo":
+            iterate -= 1
+            name = str(uploaded_image[iterate][0]).split(".")
+            answers.pop(name[0])
+            # print(answers)
 
     def draw(self,surface): #If held, turn red, otherwise white
         if self.visibility:
@@ -264,17 +267,19 @@ class Create:
 
 clock = pygame.time.Clock()
 
-add = InputBox(30, 10, 140, 32)
+add = InputBox(200, 50, 140, 32)
 
 input_boxes = [add]
 
 # set = Button(pygame.Rect(80,10,50,100),"Settings",False) #Later if I even have time
 upload = Button(pygame.Rect(80,10,100,50),"Upload",True)
-minus = Button(pygame.Rect(10,10,50,50),"-",True)
-plus = Button(pygame.Rect(17,10,50,50),"+",True)
+minus = Button(pygame.Rect(6,10,50,50),"-",True)
+plus = Button(pygame.Rect(13,10,50,50),"+",True)
 finish = Button(pygame.Rect(80,80,100,50),"Finish",True)
+undo = Button(pygame.Rect(7,50,50,50),"Undo",True)
 
-main_screen = [minus,plus,upload,finish]
+main_screen = [minus,plus,upload,finish,undo]
+final_screen = []
 
 identifiers = []
 names = []

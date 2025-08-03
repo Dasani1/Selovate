@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, random_split
 
 
 
-def train(data_path, imageSize = (224, 224), data_size = -1, batch_size = -1, test = 0.2, learning_rate = 0.0001, epoch_num = 8):
+def train(data_path, imageSize = (224, 224), data_size = 200, batch_size = -1, test = 0.2, learning_rate = 0.0001, epoch_num = 8):
     # image normalizer designed for resnet18
     transform = transforms.Compose([
         transforms.Resize(imageSize),
@@ -69,7 +69,6 @@ def train(data_path, imageSize = (224, 224), data_size = -1, batch_size = -1, te
             optimizer.step()                       # update weights
 
         losses.append(losses_epoch)
-        print(f'Epoch {epoch+1} done')
     model = best_model
     # testing section
     correct=0

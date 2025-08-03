@@ -1,0 +1,17 @@
+{
+    "labels": [
+        "Basophil",
+        "Eosinophil",
+        "Lymphocyte",
+        "Monocyte",
+        "Neutrophil",
+        "Platelet",
+        "Red Blood Cell (RBC)",
+        "Unknown/Other"
+    ],
+    "image_size": [
+        224,
+        224
+    ],
+    "pretrained": "resnet18"
+}
